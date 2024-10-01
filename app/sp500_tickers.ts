@@ -705,6 +705,15 @@ export function getTicker(companyName: string): string {
         }
     }
 
+    // If still no match, try matching individual words
+    const companyWords = lowercaseCompanyName.split(/\s+/);
+    for (const [fullName, ticker] of Object.entries(name_to_ticker)) {
+        const fullNameWords = fullName.toLowerCase().split(/\s+/);
+        if (companyWords.every(word => fullNameWords.some(fullWord => fullWord.includes(word)))) {
+            return ticker;
+        }
+    }
+
     return "Company not found in S&P 500 list";
 }
 
