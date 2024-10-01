@@ -19,7 +19,7 @@ export default function Home() {
 
         <div className="flex gap-2">
           <Link
-            href={"https://github.com/aryanvichare/stocks"}
+            href={"https://github.com/olivercarmont/kynos"}
             target='_blank'
             rel='noreferrer'>
             <div
