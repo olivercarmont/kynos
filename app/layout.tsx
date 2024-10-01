@@ -5,8 +5,8 @@ import "./globals.css";
 import { GeistSans } from "geist/font/sans";
 
 export const metadata: Metadata = {
-  title: "Stock Picker - RSCs & Shadcn/ui",
-  description: "Demo app of a stock picker using RSCs & Shadcn/ui",
+  title: "Kynos",
+  description: "Graph any S&P 500 stock with GPT-4o",
 };
 
 export const viewport: Viewport = {
