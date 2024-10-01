@@ -12,7 +12,7 @@ const monoton = localFont({ src: '../public/fonts/Monoton-Regular.ttf' });
 export default function Home() {
   return (
     <div className='min-h-screen flex flex-col'>
-      <nav className='w-full flex flex-row items-center justify-between px-6 py-4 border-b'>
+      <nav className='w-full flex flex-row items-center justify-between px-6 py-3 border-b'>
         <div className={`${monoton.className} text-4xl`}>
           Kynos
         </div>
@@ -37,7 +37,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-8">
+      <main className="flex-1 flex items-start sm:items-center justify-center px-4 pt-11 sm:pt-8">
         <div className="w-full max-w-3xl">
           <ErrorBoundary
             fallback={

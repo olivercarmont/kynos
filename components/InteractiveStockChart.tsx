@@ -51,13 +51,19 @@ export const InteractiveStockChart: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    let updatedInput = input;
+    if (!input.toLowerCase().includes("last") && !input.toLowerCase().includes("past") && !input.match(/\d+\s*(day|week|month|year)/i)) {
+      updatedInput += ", last year";
+      setInput(updatedInput);
+    }
+
     try {
       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: input }),
+        body: JSON.stringify({ prompt: updatedInput }),
       });
 
       if (!response.ok) {
@@ -136,7 +142,6 @@ export const InteractiveStockChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent className='px-2 sm:p-6'>
-        
         <div className="flex items-center space-x-2 mb-4">
           <Input 
             placeholder="e.g. Apple, last year" 
@@ -151,8 +156,6 @@ export const InteractiveStockChart: React.FC = () => {
           >
             {loading ? 'Loading...' : 'Generate'}
           </Button>
-          <br/>
-          
         </div>
         {!chartData ? <CardDescription className='mt-7'>Disclaimer: Max timeframe is 2 years</CardDescription> : ''}
         {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -175,11 +178,11 @@ export const InteractiveStockChart: React.FC = () => {
                   minTickGap={32}
                 />
                 <YAxis
-            domain={yAxisDomain}
-            tickFormatter={(value) => `$${value.toFixed(2)}`}
-            axisLine={false}
-            tickLine={false}
-            />
+                  domain={yAxisDomain}
+                  tickFormatter={(value) => `$${value.toFixed(2)}`}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip content={<CustomTooltip />} />
                 <Line type="monotone" dataKey="close" stroke={lineColor} dot={false} strokeWidth={2} />
               </LineChart>
@@ -213,13 +216,13 @@ export const InteractiveStockChart: React.FC = () => {
             )}
           </div>
           {chartData.days < 730 ?
-          <div className='leading-none text-muted-foreground'>
-          Showing stock data for the last {chartData.days} days
-          </div> :
-           <div className='leading-none text-muted-foreground'>
-           Showing stock data for the last 2 years (Max)
-           </div>}
-
+            <div className='leading-none text-muted-foreground'>
+              Showing stock data for the last {chartData.days} days
+            </div> :
+            <div className='leading-none text-muted-foreground'>
+              Showing stock data for the last 2 years (Max)
+            </div>
+          }
         </CardFooter>
       )}
     </Card>

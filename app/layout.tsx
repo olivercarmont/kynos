@@ -7,6 +7,19 @@ import { GeistSans } from "geist/font/sans";
 export const metadata: Metadata = {
   title: "Kynos",
   description: "Graph any S&P 500 stock with GPT-4o",
+  icons: {
+    icon: [
+      { url: "k.png" },
+      { url: "k.png", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "k.png" },
+    ],
+    other: [
+      { rel: "icon", url: "k.png", sizes: "192x192", type: "image/png" },
+      { rel: "icon", url: "k.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
 };
 
 export const viewport: Viewport = {

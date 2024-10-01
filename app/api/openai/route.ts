@@ -1,66 +1,27 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getTicker, getCompanyName } from '../../sp500_tickers';
-
-function formatDate(date: Date) {
-  return date.toISOString().split('T')[0];
-}
-
-async function getStockGraph(ticker: string, days: number) {
-  try {
-    const today = new Date();
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - days);
-
-    const FROM_DATE = formatDate(startDate);
-    const TO_DATE = formatDate(today);
-
-    const BASE_URL = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${FROM_DATE}/${TO_DATE}?adjusted=true&sort=asc&apiKey=${process.env.POLYGON_API_KEY}`;
-
-    const response = await fetch(BASE_URL);
-    const data = await response.json();
-
-    if (!data.results) {
-      throw new Error(`Unable to fetch stock data for ${ticker}.`);
-    }
-
-    const chartData = data.results.map((result: any) => ({
-      date: new Date(result.t).toISOString().split('T')[0],
-      high: result.h,
-      low: result.l,
-      close: result.c
-    }));
-
-    return {
-      ticker,
-      companyName: getCompanyName(ticker),
-      days,
-      chartData
-    };
-  } catch (error) {
-    throw new Error(`An error occurred while fetching the stock data: ${(error as Error).message}`);
-  }
-}
+import { getTicker } from '@/app/sp500_tickers';
+import { getStockData } from '@/lib/get-stock-data';
 
 const functions = [
   {
     name: "get_stock_graph",
-    description: "Get stock price data for a given company name and number of days",
+    description: "Get stock market data for a company",
     parameters: {
       type: "object",
       properties: {
         companyName: {
           type: "string",
-          description: "The full name of the company in the S&P 500 (e.g., 'Microsoft Corp' instead of just 'Microsoft')"
+          description: "The name of the company",
         },
         days: {
-          type: "integer",
-          description: "The number of days to retrieve data for"
-        }
+          type: "number",
+          description: "Number of days of data to retrieve",
+        },
       },
-      required: ["companyName", "days"]
-    }
-  }
+      required: ["companyName"],
+    },
+  },
 ];
 
 export async function POST(req: Request) {
@@ -78,7 +39,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are an assistant that helps retrieve stock market data for S&P 500 companies. When asked about a company's stock, use the get_stock_graph function to fetch the data."
+          content: "You are an assistant that helps retrieve stock market data for S&P 500 companies. When asked about a company's stock, use the get_stock_graph function to fetch the data. If no timeframe is specified, use the last year (365 days) as the default."
         },
         { role: "user", content: prompt }
       ],
@@ -95,13 +56,27 @@ export async function POST(req: Request) {
       if (functionName === "get_stock_graph") {
         const ticker = getTicker(functionArgs.companyName);
         if (ticker === "Company not found in S&P 500 list") {
-          return NextResponse.json({ error: `Company "${functionArgs.companyName}" not found in S&P 500 list. Please use the full company name.` }, { status: 400 });
+          return NextResponse.json({ error: `Company "${functionArgs.companyName}" not found in S&P 500 list. Please check the company name and try again.` }, { status: 400 });
         }
-        const stockData = await getStockGraph(ticker, functionArgs.days);
+        
+        // Use 365 days (last year) as default if days is not specified or is 0
+        const days = functionArgs.days && functionArgs.days > 0 ? functionArgs.days : 365;
+        
+        const stockData = await getStockData(ticker);
+        
+        // Filter the last 'days' of data
+        const filteredData = stockData.slice(-days);
+        
+        const result = {
+          ticker,
+          companyName: functionArgs.companyName,
+          days,
+          chartData: filteredData
+        };
         
         console.log(`OpenAI API call completed in ${Date.now() - startTime}ms`);
-        console.log(stockData)
-        return NextResponse.json(stockData);
+        console.log(result);
+        return NextResponse.json(result);
       }
     }
 
