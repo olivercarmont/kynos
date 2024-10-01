@@ -86,8 +86,8 @@ export const InteractiveStockChart: React.FC = () => {
     [chartData]
   );
 
-  const yAxisDomain = useMemo(() => {
-    if (!formattedData) return [0, 'auto'];
+  const yAxisDomain = useMemo((): [number, number] => {
+    if (!formattedData || formattedData.length === 0) return [0, 100]; // Default domain
     const allValues = formattedData.map(item => item.close);
     const minValue = Math.min(...allValues);
     const maxValue = Math.max(...allValues);
@@ -175,11 +175,11 @@ export const InteractiveStockChart: React.FC = () => {
                   minTickGap={32}
                 />
                 <YAxis
-                  domain={yAxisDomain}
-                  tickFormatter={(value) => `$${value.toFixed(2)}`}
-                  axisLine={false}
-                  tickLine={false}
-                />
+            domain={yAxisDomain}
+            tickFormatter={(value) => `$${value.toFixed(2)}`}
+            axisLine={false}
+            tickLine={false}
+            />
                 <Tooltip content={<CustomTooltip />} />
                 <Line type="monotone" dataKey="close" stroke={lineColor} dot={false} strokeWidth={2} />
               </LineChart>
