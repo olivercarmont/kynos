@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
     console.log('Calling OpenAI API');
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

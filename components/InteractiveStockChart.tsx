@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Line,
   LineChart,
@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TrendingDown, TrendingUp } from "lucide-react";
+import { getCompanyName } from "@/app/sp500_tickers";
 
 interface ChartData {
   date: string;
@@ -38,24 +39,25 @@ const RED_COLOR = "#E2366F";
 const GREY_COLOR = "#808080";
 
 export const InteractiveStockChart: React.FC = () => {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState("Nvidia, last year");
   const [chartData, setChartData] = useState<StockData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const fullCompanyName = useMemo(() => {
+    if (chartData?.ticker) {
+      return getCompanyName(chartData.ticker);
+    }
+    return "Loading...";
+  }, [chartData?.ticker]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
   };
 
-  const handleSubmit = async () => {
+  const fetchChartData = async (prompt: string) => {
     setLoading(true);
     setError(null);
-
-    let updatedInput = input;
-    if (!input.toLowerCase().includes("last") && !input.toLowerCase().includes("past") && !input.match(/\d+\s*(day|week|month|year)/i)) {
-      updatedInput += ", last year";
-      setInput(updatedInput);
-    }
 
     try {
       const response = await fetch('/api/openai', {
@@ -63,7 +65,7 @@ export const InteractiveStockChart: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: updatedInput }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (!response.ok) {
@@ -83,6 +85,19 @@ export const InteractiveStockChart: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleSubmit = () => {
+    let updatedInput = input;
+    if (!input.toLowerCase().includes("last") && !input.toLowerCase().includes("past") && !input.match(/\d+\s*(day|week|month|year)/i)) {
+      updatedInput += ", last year";
+      setInput(updatedInput);
+    }
+    fetchChartData(updatedInput);
+  };
+
+  useEffect(() => {
+    fetchChartData("Nvidia, last year");
+  }, []);
 
   const formattedData = useMemo(() => 
     chartData?.chartData.map((item: ChartData) => ({
@@ -133,15 +148,23 @@ export const InteractiveStockChart: React.FC = () => {
     return null;
   };
 
+  const LoadingScreen = () => (
+    <div className="flex flex-col items-center justify-center h-[400px]">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900 dark:border-gray-100"></div>
+      <p className="mt-4 text-lg font-semibold">Loading chart data...</p>
+    </div>
+  );
+
   return (
     <Card className='w-full max-w-[1800px] mx-auto'>
       <CardHeader className='flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row'>
         <div className='flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6'>
-          <CardTitle>{chartData?.ticker || "Enter a stock"}</CardTitle>
-          <CardDescription>{chartData?.companyName || "Enter a company name and timeframe"}</CardDescription>
+          <CardTitle>{chartData?.ticker || "Loading..."}</CardTitle>
+          <CardDescription>{fullCompanyName || "Fetching stock data..."}</CardDescription>
         </div>
       </CardHeader>
       <CardContent className='px-2 sm:p-6'>
+      <CardDescription className="mb-2 text-sm pl-1">Enter a company name + timeframe</CardDescription>
         <div className="flex items-center space-x-2 mb-4">
           <Input 
             placeholder="e.g. Apple, last year" 
@@ -157,9 +180,10 @@ export const InteractiveStockChart: React.FC = () => {
             {loading ? 'Loading...' : 'Generate'}
           </Button>
         </div>
-        {!chartData ? <CardDescription className='mt-7'>Disclaimer: Max timeframe is 2 years</CardDescription> : ''}
         {error && <div className="text-red-500 mb-4">{error}</div>}
-        {chartData && (
+        {loading ? (
+          <LoadingScreen />
+        ) : chartData ? (
           <div className='aspect-[16/9] w-full'>
             <ResponsiveContainer width='100%' height='100%'>
               <LineChart
@@ -188,7 +212,7 @@ export const InteractiveStockChart: React.FC = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        )}
+        ) : null}
       </CardContent>
       {chartData && (
         <CardFooter className='flex-col items-start gap-2 text-sm pt-0'>

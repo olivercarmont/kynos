@@ -16,14 +16,12 @@ const formatDate = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-const DAYS_AGO = 100;
-
-const getEndpoint = (ticker: string): string => {
+const getEndpoint = (ticker: string, days: number = 365): string => {
   const today = new Date();
-  const last7Days = new Date(today);
-  last7Days.setDate(today.getDate() - DAYS_AGO);
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - days);
 
-  const from = formatDate(last7Days);
+  const from = formatDate(startDate);
   const to = formatDate(today);
 
   return getAugmentedFetchUrl(ticker, from, to);
@@ -39,9 +37,10 @@ export interface StockData {
 }
 
 export async function getStockData(
-  ticker: string = "NVDA"
+  ticker: string = "NVDA",
+  days: number = 365
 ): Promise<StockData[]> {
-  const res = await fetch(getEndpoint(ticker), {
+  const res = await fetch(getEndpoint(ticker, days), {
     headers: {
       "Content-Type": "application/json",
     },
