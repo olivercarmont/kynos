@@ -35,11 +35,11 @@ export async function POST(req: Request) {
 
     console.log('Calling OpenAI API');
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: "You are an assistant that helps retrieve stock market data for S&P 500 companies. When asked about a company's stock, use the get_stock_graph function to fetch the data. If no timeframe is specified, use the last year (365 days) as the default."
+          content: "You are an assistant that helps retrieve stock market data for S&P 500 companies. When asked about a company's stock, use the get_stock_graph function to fetch the data. convert the timeframe to number of days. If no timeframe is specified, use the last year (365 days) as the default."
         },
         { role: "user", content: prompt }
       ],
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         // Use 365 days (last year) as default if days is not specified or is 0
         const days = functionArgs.days && functionArgs.days > 0 ? functionArgs.days : 365;
         
-        const stockData = await getStockData(ticker);
+        const stockData = await getStockData(ticker, days);
         
         // Filter the last 'days' of data
         const filteredData = stockData.slice(-days);
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         };
         
         console.log(`OpenAI API call completed in ${Date.now() - startTime}ms`);
-        console.log(result);
+        // console.log(result);
         return NextResponse.json(result);
       }
     }
