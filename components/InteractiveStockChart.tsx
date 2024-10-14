@@ -39,17 +39,17 @@ const RED_COLOR = "#E2366F";
 const GREY_COLOR = "#808080";
 
 const timePeriods = [
-  { label: "1M", fullLabel: "1 Month", value: 30 },
-  { label: "3M", fullLabel: "3 Months", value: 90 },
-  { label: "6M", fullLabel: "6 Months", value: 180 },
-  { label: "1Y", fullLabel: "1 Year", value: 365 },
-  { label: "2Y", fullLabel: "2 Years", value: 730 },
-  { label: "5Y", fullLabel: "5 Years", value: 1825 },
+  { label: "1M", fullLabel: "1 Month", fullLabelLower: "1 month", value: 30 },
+  { label: "3M", fullLabel: "3 Months", fullLabelLower: "3 months", value: 90 },
+  { label: "6M", fullLabel: "6 Months", fullLabelLower: "6 months", value: 180 },
+  { label: "1Y", fullLabel: "1 Year", fullLabelLower: "1 year", value: 365 },
+  { label: "2Y", fullLabel: "2 Years",fullLabelLower: "2 years", value: 730 },
+  { label: "5Y", fullLabel: "5 Years", fullLabelLower: "5 years", value: 1825 },
 ];
 
 export const InteractiveStockChart: React.FC = () => {
   const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState(365); // Default to 1 year
+  const [selectedPeriod, setSelectedPeriod] = useState(365);
   const [chartData, setChartData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +77,6 @@ export const InteractiveStockChart: React.FC = () => {
       if (data.error) {
         throw new Error(data.error);
       }
-      console.log(data);
       setChartData(data);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -108,12 +107,12 @@ export const InteractiveStockChart: React.FC = () => {
   );
 
   const yAxisDomain = useMemo((): [number, number] => {
-    if (!formattedData || formattedData.length === 0) return [0, 100]; // Default domain
+    if (!formattedData || formattedData.length === 0) return [0, 100];
     const allValues = formattedData.map(item => item.close);
     const minValue = Math.min(...allValues);
     const maxValue = Math.max(...allValues);
     const padding = (maxValue - minValue) * 0.1;
-    return [Math.floor(minValue - padding), Math.ceil(maxValue + padding)];
+    return [Math.max(0, Math.floor(minValue - padding)), Math.ceil(maxValue + padding)];
   }, [formattedData]);
 
   const percentageChange = useMemo(() => {
@@ -156,53 +155,55 @@ export const InteractiveStockChart: React.FC = () => {
   return (
     <Card className='w-full max-w-[1800px] mx-auto'>
       <CardHeader className='flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row'>
-        <div className='flex flex-1 flex-col justify-center gap-1 px-6 py-1 sm:py-6'>
+        <div className='flex flex-1 flex-col justify-center gap-0 px-6 py-3 sm:py-6'>
           <CardTitle className="text-2xl font-bold">{chartData?.ticker || "Loading..."}</CardTitle>
-          <CardDescription className="text-base">{chartData?.companyName || "Fetching stock data..."}</CardDescription>
+          <CardDescription className="text-base mt-1">{chartData?.companyName || "Fetching stock data..."}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className='px-2 sm:p-6'>
+      <CardContent className='px-2 pt-4 sm:p-6'>
         <CardDescription className="mb-2 text-sm pl-1">Select a company and time period</CardDescription>
-        <div className="flex items-center space-x-2 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-6">
           <StockSearch 
             onSelectStock={setSelectedStock} 
             initialValue="NVIDIA Corporation"
             clearOnFocus={true}
           />
-          <Select 
-            value={selectedPeriod.toString()}
-            onValueChange={(value) => {
-              setSelectedPeriod(Number(value));
-              setSelectedPeriodLabel(timePeriods.find(p => p.value.toString() === value)?.label || "");
-            }}
-          >
-            <SelectTrigger className="w-[120px] bg-gray-100 dark:bg-gray-800 border-none focus:ring-0 focus:ring-offset-0">
-              <SelectValue>
-                {selectedPeriodLabel}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {timePeriods.map((period) => (
-                <SelectItem key={period.value} value={period.value.toString()}>
-                  <span className="font-medium">{period.label}</span>
-                  <span className="ml-2 text-gray-500">{period.fullLabel}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={loading || !selectedStock}
-            className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
-          >
-            {loading ? 'Loading...' : 'Generate'}
-          </Button>
+          <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+            <Select 
+              value={selectedPeriod.toString()}
+              onValueChange={(value) => {
+                setSelectedPeriod(Number(value));
+                setSelectedPeriodLabel(timePeriods.find(p => p.value.toString() === value)?.label || "");
+              }}
+            >
+              <SelectTrigger className="w-[120px] bg-gray-100 dark:bg-gray-800 border-none focus:ring-0 focus:ring-offset-0">
+                <SelectValue>
+                  {selectedPeriodLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {timePeriods.map((period) => (
+                  <SelectItem key={period.value} value={period.value.toString()}>
+                    <span className="font-medium">{period.label}</span>
+                    <span className="ml-2 text-gray-500">{period.fullLabel}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading || !selectedStock}
+              className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
+            >
+              {loading ? 'Loading...' : 'Generate'}
+            </Button>
+          </div>
         </div>
         {error && <div className="text-red-500 mb-4">{error}</div>}
         {loading ? (
           <LoadingScreen />
         ) : chartData ? (
-          <div className='aspect-[16/9] w-full'>
+          <div className='w-full mt-8 h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]'>
             <ResponsiveContainer width='100%' height='100%'>
               <LineChart
                 data={formattedData}
@@ -218,6 +219,10 @@ export const InteractiveStockChart: React.FC = () => {
                   axisLine={false}
                   tickMargin={8}
                   minTickGap={32}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  }}
                 />
                 <YAxis
                   domain={yAxisDomain}
@@ -233,7 +238,7 @@ export const InteractiveStockChart: React.FC = () => {
         ) : null}
       </CardContent>
       {chartData && (
-        <CardFooter className='flex-col items-start gap-2 text-sm pt-0'>
+        <CardFooter className='flex-col items-start gap-2 text-sm pt-4'>
           <div className='font-medium leading-none'>
             {percentageChange > 0 ? (
               <>
@@ -257,14 +262,22 @@ export const InteractiveStockChart: React.FC = () => {
               <>Unchanged this period</>
             )}
           </div>
-          {chartData.days < 730 ?
-            <div className='leading-none text-muted-foreground'>
-              Showing stock data for the last {chartData.days} days
-            </div> :
-            <div className='leading-none text-muted-foreground'>
-              Showing stock data for the last 2 years (Max)
-            </div>
-          }
+          {(() => {
+            const period = timePeriods.find(p => p.value === chartData.days);
+            if (period) {
+              return (
+                <div className='leading-none text-muted-foreground'>
+                  Showing stock data for the last {period.fullLabelLower}
+                </div>
+              );
+            } else {
+              return (
+                <div className='leading-none text-muted-foreground'>
+                  Showing stock data for the last {chartData.days} days
+                </div>
+              );
+            }
+          })()}
         </CardFooter>
       )}
     </Card>
