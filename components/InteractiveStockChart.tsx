@@ -17,10 +17,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TrendingDown, TrendingUp } from "lucide-react";
-import { getCompanyName } from "@/app/sp500_tickers";
+import StockSearch from "./StockSearch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ChartData {
   date: string;
@@ -38,34 +38,33 @@ const GREEN_COLOR = "#0cf0a8";
 const RED_COLOR = "#E2366F";
 const GREY_COLOR = "#808080";
 
+const timePeriods = [
+  { label: "1M", fullLabel: "1 Month", value: 30 },
+  { label: "3M", fullLabel: "3 Months", value: 90 },
+  { label: "6M", fullLabel: "6 Months", value: 180 },
+  { label: "1Y", fullLabel: "1 Year", value: 365 },
+  { label: "2Y", fullLabel: "2 Years", value: 730 },
+];
+
 export const InteractiveStockChart: React.FC = () => {
-  const [input, setInput] = useState("Nvidia, last year");
+  const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState(365); // Default to 1 year
   const [chartData, setChartData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPeriodLabel, setSelectedPeriodLabel] = useState("1Y");
 
-  const fullCompanyName = useMemo(() => {
-    if (chartData?.ticker) {
-      return getCompanyName(chartData.ticker);
-    }
-    return "Loading...";
-  }, [chartData?.ticker]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
-
-  const fetchChartData = async (prompt: string) => {
+  const fetchChartData = async (symbol: string, name: string, days: number) => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/openai', {
+      const response = await fetch('/api/stock', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ symbol, name, days }),
       });
 
       if (!response.ok) {
@@ -77,6 +76,7 @@ export const InteractiveStockChart: React.FC = () => {
       if (data.error) {
         throw new Error(data.error);
       }
+      console.log(data);
       setChartData(data);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -87,16 +87,15 @@ export const InteractiveStockChart: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    let updatedInput = input;
-    if (!input.toLowerCase().includes("last") && !input.toLowerCase().includes("past") && !input.match(/\d+\s*(day|week|month|year)/i)) {
-      updatedInput += ", last year";
-      setInput(updatedInput);
+    if (selectedStock) {
+      fetchChartData(selectedStock.symbol, selectedStock.name, selectedPeriod);
     }
-    fetchChartData(updatedInput);
   };
 
   useEffect(() => {
-    fetchChartData("Nvidia, last year");
+    const initialStock = { symbol: "NVDA", name: "NVIDIA Corporation" };
+    setSelectedStock(initialStock);
+    fetchChartData(initialStock.symbol, initialStock.name, 365);
   }, []);
 
   const formattedData = useMemo(() => 
@@ -131,8 +130,7 @@ export const InteractiveStockChart: React.FC = () => {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const originalDate = chartData?.chartData.find(item => new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) === label)?.date;
-      const date = originalDate ? new Date(originalDate) : new Date();
+      const date = new Date(payload[0].payload.date);
       return (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
           <p className="text-sm text-black dark:text-white mb-2">
@@ -158,23 +156,43 @@ export const InteractiveStockChart: React.FC = () => {
   return (
     <Card className='w-full max-w-[1800px] mx-auto'>
       <CardHeader className='flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row'>
-        <div className='flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6'>
-          <CardTitle>{chartData?.ticker || "Loading..."}</CardTitle>
-          <CardDescription>{fullCompanyName || "Fetching stock data..."}</CardDescription>
+        <div className='flex flex-1 flex-col justify-center gap-1 px-6 py-1 sm:py-6'>
+          <CardTitle className="text-2xl font-bold">{chartData?.ticker || "Loading..."}</CardTitle>
+          <CardDescription className="text-base">{chartData?.companyName || "Fetching stock data..."}</CardDescription>
         </div>
       </CardHeader>
       <CardContent className='px-2 sm:p-6'>
-      <CardDescription className="mb-2 text-sm pl-1">Enter a company name + timeframe</CardDescription>
+        <CardDescription className="mb-2 text-sm pl-1">Select a company and time period</CardDescription>
         <div className="flex items-center space-x-2 mb-4">
-          <Input 
-            placeholder="e.g. Apple, last year" 
-            value={input}
-            onChange={handleInputChange}
-            className="h-12 text-base tracking-tight transition-all duration-100 ease-in-out focus-visible:ring-1 focus-visible:ring-gray-400 focus-visible:ring-offset-0 focus-visible:outline-none"
+          <StockSearch 
+            onSelectStock={setSelectedStock} 
+            initialValue="NVIDIA Corporation"
+            clearOnFocus={true}
           />
+          <Select 
+            value={selectedPeriod.toString()}
+            onValueChange={(value) => {
+              setSelectedPeriod(Number(value));
+              setSelectedPeriodLabel(timePeriods.find(p => p.value.toString() === value)?.label || "");
+            }}
+          >
+            <SelectTrigger className="w-[120px] bg-gray-100 dark:bg-gray-800 border-none focus:ring-0 focus:ring-offset-0">
+              <SelectValue>
+                {selectedPeriodLabel}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {timePeriods.map((period) => (
+                <SelectItem key={period.value} value={period.value.toString()}>
+                  <span className="font-medium">{period.label}</span>
+                  <span className="ml-2 text-gray-500">{period.fullLabel}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button 
             onClick={handleSubmit} 
-            disabled={loading}
+            disabled={loading || !selectedStock}
             className="bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
           >
             {loading ? 'Loading...' : 'Generate'}
