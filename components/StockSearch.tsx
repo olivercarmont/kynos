@@ -1,21 +1,27 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Fuse from 'fuse.js';
 import { useTheme } from 'next-themes';
 import { Input } from "@/components/ui/input";
-import { ChevronDown } from "lucide-react";
 
 interface Stock {
   symbol: string;
   name: string;
 }
 
-interface FuseResult extends Fuse.FuseResult<Stock> {
-  matches?: Array<{
-    indices: Array<[number, number]>;
-    key: string;
-  }>;
+type FuseResultMatch = {
+  indices: readonly [number, number][];
+  key?: string;
+  refIndex: number;
+  value?: string;
+}
+
+type FuseResult = {
+  item: Stock;
+  refIndex: number;
+  score?: number;
+  matches?: readonly FuseResultMatch[];
 }
 
 interface StockSearchProps {
@@ -34,23 +40,7 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
   const searchRef = useRef<HTMLDivElement>(null);
   const fuse = useRef<Fuse<Stock> | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-    loadStocks();
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowResults(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const loadStocks = async () => {
+  const loadStocks = useCallback(async () => {
     const cachedStocks = localStorage.getItem('stockSymbols');
     if (cachedStocks) {
       const parsedStocks = JSON.parse(cachedStocks);
@@ -67,7 +57,23 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
         console.error('Failed to fetch stocks:', error);
       }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+    loadStocks();
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [loadStocks]);
 
   const initFuse = (stocksData: Stock[]) => {
     fuse.current = new Fuse(stocksData, {
@@ -76,14 +82,6 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
       ignoreLocation: true,
       includeMatches: true,
       shouldSort: true,
-      sortFn: (a, b) => {
-        const aSymbol = a.item?.symbol || '';
-        const bSymbol = b.item?.symbol || '';
-        if (a.score === b.score) {
-          return aSymbol.length - bSymbol.length;
-        }
-        return (a.score || 0) - (b.score || 0);
-      }
     });
   };
 
@@ -91,7 +89,7 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
     setSearch(text);
     if (fuse.current && text) {
       const searchResults = fuse.current.search(text);
-      setResults(searchResults.slice(0, 5));
+      setResults(searchResults as FuseResult[]);
       setShowResults(true);
     } else {
       setResults([]);
@@ -121,16 +119,21 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
     onSelectStock(stock);
   };
 
-  const highlightMatches = (text: string, matches: Array<[number, number]>) => {
+  const highlightMatches = (text: string, matches: readonly FuseResultMatch[] | undefined) => {
+    if (!matches || matches.length === 0) return text;
+    
+    const sortedMatches = [...matches].sort((a, b) => a.indices[0][0] - b.indices[0][0]);
     let lastIndex = 0;
     const parts = [];
 
-    matches.forEach(([start, end]) => {
-      if (start > lastIndex) {
-        parts.push(text.slice(lastIndex, start));
-      }
-      parts.push(<span key={start} className="font-semibold">{text.slice(start, end + 1)}</span>);
-      lastIndex = end + 1;
+    sortedMatches.forEach((match) => {
+      match.indices.forEach(([start, end]) => {
+        if (start > lastIndex) {
+          parts.push(text.slice(lastIndex, start));
+        }
+        parts.push(<span key={start} className="font-semibold">{text.slice(start, end + 1)}</span>);
+        lastIndex = end + 1;
+      });
     });
 
     if (lastIndex < text.length) {
@@ -164,8 +167,8 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
           isDarkTheme ? 'bg-gray-800 text-white' : 'bg-white text-black'
         }`}>
           {results.map((result, index) => {
-            const symbolMatches = result.matches?.find(m => m.key === 'symbol')?.indices || [];
-            const nameMatches = result.matches?.find(m => m.key === 'name')?.indices || [];
+            const symbolMatches = result.matches?.find(m => m.key === 'symbol');
+            const nameMatches = result.matches?.find(m => m.key === 'name');
             return (
               <li 
                 key={index} 
@@ -176,8 +179,8 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
                 }`}
                 onClick={() => handleSelectStock(result.item)}
               >
-                <span className="font-medium">{highlightMatches(result.item.symbol, symbolMatches)}</span>
-                <span className="ml-2 text-gray-500">{highlightMatches(result.item.name, nameMatches)}</span>
+                <span className="font-medium">{highlightMatches(result.item.symbol, symbolMatches ? [symbolMatches] : undefined)}</span>
+                <span className="ml-2 text-gray-500">{highlightMatches(result.item.name, nameMatches ? [nameMatches] : undefined)}</span>
               </li>
             );
           })}
