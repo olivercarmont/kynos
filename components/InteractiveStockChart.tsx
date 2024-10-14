@@ -44,6 +44,7 @@ const timePeriods = [
   { label: "6M", fullLabel: "6 Months", value: 180 },
   { label: "1Y", fullLabel: "1 Year", value: 365 },
   { label: "2Y", fullLabel: "2 Years", value: 730 },
+  { label: "5Y", fullLabel: "5 Years", value: 1825 },
 ];
 
 export const InteractiveStockChart: React.FC = () => {
@@ -101,7 +102,7 @@ export const InteractiveStockChart: React.FC = () => {
   const formattedData = useMemo(() => 
     chartData?.chartData.map((item: ChartData) => ({
       ...item,
-      date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      date: new Date(item.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
     })),
     [chartData]
   );
@@ -130,11 +131,10 @@ export const InteractiveStockChart: React.FC = () => {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const date = new Date(payload[0].payload.date);
       return (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
           <p className="text-sm text-black dark:text-white mb-2">
-            {date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {payload[0].payload.date}
           </p>
           <div className="flex items-center">
             <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: lineColor }}></div>

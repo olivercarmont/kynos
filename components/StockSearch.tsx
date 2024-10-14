@@ -13,7 +13,7 @@ interface Stock {
 type FuseResultMatch = {
   indices: readonly [number, number][];
   key?: string;
-  refIndex: number;
+  refIndex?: number;
   value?: string;
 }
 
@@ -32,7 +32,6 @@ interface StockSearchProps {
 
 const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue = '', clearOnFocus = false }) => {
   const [search, setSearch] = useState(initialValue);
-  const [stocks, setStocks] = useState<Stock[]>([]);
   const [results, setResults] = useState<FuseResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const { theme, systemTheme } = useTheme();
@@ -40,28 +39,36 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
   const searchRef = useRef<HTMLDivElement>(null);
   const fuse = useRef<Fuse<Stock> | null>(null);
 
-  const loadStocks = useCallback(async () => {
-    const cachedStocks = localStorage.getItem('stockSymbols');
-    if (cachedStocks) {
-      const parsedStocks = JSON.parse(cachedStocks);
-      setStocks(parsedStocks);
-      initFuse(parsedStocks);
-    } else {
-      try {
-        const response = await fetch('/api/stocks');
-        const fetchedStocks = await response.json();
-        setStocks(fetchedStocks);
-        localStorage.setItem('stockSymbols', JSON.stringify(fetchedStocks));
-        initFuse(fetchedStocks);
-      } catch (error) {
-        console.error('Failed to fetch stocks:', error);
-      }
-    }
+  const initFuse = useCallback((stocksData: Stock[]) => {
+    fuse.current = new Fuse(stocksData, {
+      keys: ['symbol', 'name'],
+      threshold: 0.3,
+      ignoreLocation: true,
+      includeMatches: true,
+      shouldSort: true,
+    });
   }, []);
 
   useEffect(() => {
     setMounted(true);
-    loadStocks();
+    const cachedStocks = localStorage.getItem('stockSymbols');
+    if (cachedStocks) {
+      const parsedStocks = JSON.parse(cachedStocks);
+      initFuse(parsedStocks);
+    } else {
+      // If no cached stocks, fetch from API (this should happen rarely)
+      fetch('/api/stocks')
+        .then(response => response.json())
+        .then(fetchedStocks => {
+          const formattedStocks = fetchedStocks.map((stock: Stock) => ({
+            symbol: stock.symbol.toUpperCase(),
+            name: stock.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')
+          }));
+          localStorage.setItem('stockSymbols', JSON.stringify(formattedStocks));
+          initFuse(formattedStocks);
+        })
+        .catch(error => console.error('Failed to fetch stocks:', error));
+    }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -73,23 +80,13 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [loadStocks]);
-
-  const initFuse = (stocksData: Stock[]) => {
-    fuse.current = new Fuse(stocksData, {
-      keys: ['symbol', 'name'],
-      threshold: 0.3,
-      ignoreLocation: true,
-      includeMatches: true,
-      shouldSort: true,
-    });
-  };
+  }, [initFuse]);
 
   const handleSearch = (text: string) => {
     setSearch(text);
     if (fuse.current && text) {
       const searchResults = fuse.current.search(text);
-      setResults(searchResults as FuseResult[]);
+      setResults(searchResults.slice(0, 10) as FuseResult[]); // Type assertion here
       setShowResults(true);
     } else {
       setResults([]);
@@ -122,7 +119,7 @@ const StockSearch: React.FC<StockSearchProps> = ({ onSelectStock, initialValue =
   const highlightMatches = (text: string, matches: readonly FuseResultMatch[] | undefined) => {
     if (!matches || matches.length === 0) return text;
     
-    const sortedMatches = [...matches].sort((a, b) => a.indices[0][0] - b.indices[0][0]);
+    const sortedMatches = [...matches].sort((a, b) => (a.indices[0][0] || 0) - (b.indices[0][0] || 0));
     let lastIndex = 0;
     const parts = [];
 
