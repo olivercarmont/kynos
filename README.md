@@ -2,7 +2,7 @@
 
 ![Kynos Stock Chart Generator](./readme-img.png)
 
-**[Test it out at kynos.cc](https://kynos.cc)**
+Test it out at **[kynos.cc](https://kynos.cc)**
 
 ## Overview
 
