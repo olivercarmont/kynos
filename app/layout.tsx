@@ -6,7 +6,7 @@ import { GeistSans } from "geist/font/sans";
 
 export const metadata: Metadata = {
   title: "Kynos",
-  description: "Graph any S&P 500 stock with GPT-4o",
+  description: "Graph Stocks Beautifully",
   icons: {
     icon: [
       { url: "k.png" },
