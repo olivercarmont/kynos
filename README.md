@@ -1,8 +1,8 @@
 # Kynos: Interactive Stock Chart Generator
 
-![Kynos Stock Chart Generator](public/readme.png)
+![Kynos Stock Chart Generator](./readme-img.png)
 
-**[Check out Kynos live at kynos.cc](https://kynos.cc)**
+**[Test it out at kynos.cc](https://kynos.cc)**
 
 ## Overview
 
