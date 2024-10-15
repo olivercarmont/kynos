@@ -203,7 +203,7 @@ export const InteractiveStockChart: React.FC = () => {
         {loading ? (
           <LoadingScreen />
         ) : chartData ? (
-          <div className='w-full mt-8 h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]'>
+          <div className='w-full mt-8 h-[400px] sm:h-[400px]'>
             <ResponsiveContainer width='100%' height='100%'>
               <LineChart
                 data={formattedData}
@@ -229,6 +229,7 @@ export const InteractiveStockChart: React.FC = () => {
                   tickFormatter={(value) => `$${value.toFixed(2)}`}
                   axisLine={false}
                   tickLine={false}
+                  allowDecimals={false}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Line type="monotone" dataKey="close" stroke={lineColor} dot={false} strokeWidth={2} />
