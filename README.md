@@ -95,6 +95,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Original concept forked from [aryanvichare/stocks](https://github.com/aryanvichare/stocks)
 - Stock data provided by [Polygon.io](https://polygon.io/)
+- Fuzzy search by [Fuse.js](https://fusejs.io/)
 
 ## Contact
 
